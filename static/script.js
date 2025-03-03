@@ -1,6 +1,5 @@
 function showAnalysisPage() {
-    document.getElementById('landing-page').style.display = 'none';
-    document.getElementById('analysis-page').style.display = 'block';
+    window.location.href="/analysis"
 }
 
 document.getElementById('stockForm').addEventListener('submit', async (e) => {

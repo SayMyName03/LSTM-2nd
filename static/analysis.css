@@ -1,0 +1,128 @@
+body {
+    background-color: #0d1117;
+    color: white;
+    font-family: 'Arial', sans-serif;
+}
+
+.container {
+    max-width: 1200px;
+}
+
+h1, h3, h4, h6 {
+    color: white;
+}
+
+p {
+    color: #c9d1d9;
+}
+
+.search-container {
+    background-color: rgba(22, 27, 34, 0.7);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    margin-bottom: 25px;
+}
+
+.metric-card {
+    background-color: rgba(22, 27, 34, 0.7);
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    margin-bottom: 20px;
+    height: 100%;
+}
+
+.metric-card h6 {
+    color: #8b949e;
+    font-weight: normal;
+    margin-bottom: 8px;
+}
+
+.metric-card h4 {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin: 0;
+}
+
+.chart-container {
+    background-color: rgba(22, 27, 34, 0.7);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    margin-bottom: 25px;
+}
+
+.chart-container h3 {
+    margin-bottom: 20px;
+    font-size: 1.4rem;
+}
+
+.prediction-container {
+    background-color: rgba(22, 27, 34, 0.7);
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    margin-top: 25px;
+    margin-bottom: 25px;
+}
+
+.prediction-container h3 {
+    margin-bottom: 15px;
+}
+
+.prediction-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #0d6efd;
+}
+
+.prediction-date {
+    color: #8b949e;
+    margin-top: 10px;
+    margin-bottom: 15px;
+}
+
+.prediction-info {
+    color: #8b949e;
+    margin-top: 15px;
+    font-size: 0.9rem;
+}
+
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    margin-bottom: 40px;
+}
+
+.btn-secondary:hover {
+    background-color: #5c636a;
+    border-color: #565e64;
+}
+
+.text-light {
+    color: #f8f9fa !important;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Make sure Plotly charts are fully visible */
+#priceMAChart, #actualVsPredictedChart, #futurePredictionChart {
+    width: 100%;
+    height: 400px;
+}

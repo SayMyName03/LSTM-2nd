@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockSage - Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="stylesheet" href="/static/analysis.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Stock Analysis</h1>
+        <p class="text-center">Enter a stock ticker to analyze its performance and receive AI predictions.</p>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="search-container">
+                    <form id="stockForm" class="mb-4">
+                        <div class="input-group">
+                            <input type="text" id="ticker" class="form-control" placeholder="Enter Stock Ticker (e.g., AAPL, GOOGL)" required>
+                            <button type="submit" class="btn btn-primary">Analyze</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div id="loadingSpinner" class="text-center mt-4 d-none">
+                    <div class="spinner-border text-light" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-light">Analyzing data and training LSTM model. This may take a moment...</p>
+                </div>
+                
+                <div id="errorMessage" class="alert alert-danger mt-4 d-none"></div>
+                
+                <div id="results" class="d-none">
+                    <div class="metrics-container">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <h6>Current Price</h6>
+                                    <h4 id="currentPrice">$0.00</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <h6>Volume</h6>
+                                    <h4 id="volume">0</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <h6>52-Week High</h6>
+                                    <h4 id="high52">$0.00</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <h6>52-Week Low</h6>
+                                    <h4 id="low52">$0.00</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Main Price Chart with MAs -->
+                    <div class="chart-container">
+                        <h3>Price History with Moving Averages</h3>
+                        <div id="priceMAChart"></div>
+                    </div>
+                    
+                    <!-- Test Data Chart -->
+                    <div class="chart-container mt-4">
+                        <h3>Actual vs Predicted Prices</h3>
+                        <div id="actualVsPredictedChart"></div>
+                    </div>
+                    
+                    <!-- Future Prediction Chart -->
+                    <div class="chart-container mt-4">
+                        <h3>30-Day Future Prediction</h3>
+                        <div id="futurePredictionChart"></div>
+                    </div>
+                    
+                    <!-- Prediction Container -->
+                    <div class="prediction-container">
+                        <h3>Next Day Price Prediction</h3>
+                        <div id="predictionValue" class="prediction-value">$0.00</div>
+                        <div id="predictionDate" class="prediction-date">Date</div>
+                        <p class="prediction-info">This prediction is based on LSTM neural network analysis of historical data patterns.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4 mb-5">
+            <a href="/" class="btn btn-secondary">Back to Home</a>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('stockForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+            if (!ticker) return;
+            
+            // Show loading spinner, hide results and error
+            document.getElementById('loadingSpinner').classList.remove('d-none');
+            document.getElementById('results').classList.add('d-none');
+            document.getElementById('errorMessage').classList.add('d-none');
+            
+            // Send AJAX request
+            const formData = new FormData();
+            formData.append('ticker', ticker);
+            
+            fetch('/analyze', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide loading spinner
+                document.getElementById('loadingSpinner').classList.add('d-none');
+                
+                if (data.error) {
+                    // Show error
+                    document.getElementById('errorMessage').textContent = data.error;
+                    document.getElementById('errorMessage').classList.remove('d-none');
+                    return;
+                }
+                
+                // Update metrics
+                document.getElementById('currentPrice').textContent = '$' + data.current_price.toFixed(2);
+                document.getElementById('volume').textContent = data.volume.toLocaleString();
+                document.getElementById('high52').textContent = '$' + data.high_52week.toFixed(2);
+                document.getElementById('low52').textContent = '$' + data.low_52week.toFixed(2);
+                document.getElementById('predictionValue').textContent = '$' + data.predicted_next_day.toFixed(2);
+                document.getElementById('predictionDate').textContent = data.future_dates[0];
+                
+                // Create charts
+                createPriceMAChart(data.dates, data.closing_prices, data.ma100, data.ma200, ticker);
+                createActualVsPredictedChart(data.pred_dates, data.actual_prices, data.predicted_prices, ticker);
+                createFuturePredictionChart(data.dates.slice(-30), data.closing_prices.slice(-30), 
+                                           data.future_dates, data.future_prices, ticker);
+                
+                // Show results
+                document.getElementById('results').classList.remove('d-none');
+            })
+            .catch(error => {
+                document.getElementById('loadingSpinner').classList.add('d-none');
+                document.getElementById('errorMessage').textContent = 'Error: ' + error.message;
+                document.getElementById('errorMessage').classList.remove('d-none');
+                console.error('Error:', error);
+            });
+        });
+        
+        function createPriceMAChart(dates, prices, ma100, ma200, ticker) {
+            const traces = [
+                {
+                    name: 'Price',
+                    x: dates,
+                    y: prices,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: {
+                        color: '#17BECF',
+                        width: 2
+                    }
+                },
+                {
+                    name: '100-Day MA',
+                    x: dates,
+                    y: ma100,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: {
+                        color: '#EF553B',
+                        width: 2
+                    }
+                },
+                {
+                    name: '200-Day MA',
+                    x: dates,
+                    y: ma200,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: {
+                        color: '#7F7F7F',
+                        width: 2
+                    }
+                }
+            ];
+            
+            const layout = {
+                title: `${ticker} Price History with Moving Averages`,
+                xaxis: {
+                    title: 'Date',
+                    showgrid: false
+                },
+                yaxis: {
+                    title: 'Price ($)',
+                    showgrid: true
+                },
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: {
+                    color: '#FFFFFF'
+                },
+                legend: {
+                    font: {
+                        color: '#FFFFFF'
+                    }
+                },
+                margin: {
+                    l: 60,
+                    r: 20,
+                    t: 50,
+                    b: 50
+                }
+            };
+            
+            Plotly.newPlot('priceMAChart', traces, layout);
+        }
+        
+        function createActualVsPredictedChart(dates, actualPrices, predictedPrices, ticker) {
+            const traces = [
+                {
+                    name: 'Actual Price',
+                    x: dates,
+                    y: actualPrices,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: {
+                        color: '#17BECF',
+                        width: 2
+                    }
+                },
+                {
+                    name: 'Predicted Price',
+                    x: dates,
+                    y: predictedPrices,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: {
+                        color: '#EF553B',
+                        width: 2
+                    }
+                }
+            ];
+            
+            const layout = {
+                title: `${ticker} Actual vs Predicted Prices (Test Data)`,
+                xaxis: {
+                    title: 'Date',
+                    showgrid: false
+                },
+                yaxis: {
+                    title: 'Price ($)',
+                    showgrid: true
+                },
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: {
+                    color: '#FFFFFF'
+                },
+                legend: {
+                    font: {
+                        color: '#FFFFFF'
+                    }
+                },
+                margin: {
+                    l: 60,
+                    r: 20,
+                    t: 50,
+                    b: 50
+                }
+            };
+            
+            Plotly.newPlot('actualVsPredictedChart', traces, layout);
+        }
+        
+        function createFuturePredictionChart(historicalDates, historicalPrices, futureDates, futurePrices, ticker) {
+            const traces = [
+                {
+                    name: 'Historical Price',
+                    x: historicalDates,
+                    y: historicalPrices,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: {
+                        color: '#17BECF',
+                        width: 2
+                    }
+                },
+                {
+                    name: 'Future Prediction',
+                    x: futureDates,
+                    y: futurePrices,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: {
+                        color: '#EF553B',
+                        width: 2,
+                        dash: 'dash'
+                    }
+                }
+            ];
+            
+            const layout = {
+                title: `${ticker} 30-Day Price Prediction`,
+                xaxis: {
+                    title: 'Date',
+                    showgrid: false
+                },
+                yaxis: {
+                    title: 'Price ($)',
+                    showgrid: true
+                },
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: {
+                    color: '#FFFFFF'
+                },
+                legend: {
+                    font: {
+                        color: '#FFFFFF'
+                    }
+                },
+                margin: {
+                    l: 60,
+                    r: 20,
+                    t: 50,
+                    b: 50
+                }
+            };
+            
+            Plotly.newPlot('futurePredictionChart', traces, layout);
+        }
+    </script>
+</body>
+</html>
