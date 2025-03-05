@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS  
 import yfinance as yf
 from datetime import datetime, timedelta
 import numpy as np
@@ -9,6 +10,7 @@ from tensorflow.keras.layers import Dense, LSTM, Dropout
 import os
 
 app = Flask(__name__)
+CORS(app)
 
 def create_lstm_model(X_train):
     # Create and compile LSTM model
@@ -84,7 +86,7 @@ def analyze():
         # Get ticker from form
         ticker = request.form.get('ticker')
         if not ticker:
-            return jsonify({'error': 'No ticker provided'})
+            return jsonify({'error': 'No ticker provided'}), 400
         
         # Get dates
         end_date = datetime.now()
@@ -93,7 +95,7 @@ def analyze():
         # Load data
         df = yf.download(ticker, start=start_date, end=end_date)
         if df.empty:
-            return jsonify({'error': 'No data found for this ticker'})
+            return jsonify({'error': 'No data found for this ticker'}),404
         
         # Calculate moving averages
         df['MA100'] = df['Close'].rolling(window=100).mean()
@@ -152,11 +154,11 @@ def analyze():
             ]
         }
         
-        return jsonify(response_data)
+        return jsonify(response_data),200
     
     except Exception as e:
         print(f"Error: {str(e)}")  # This will print to your terminal
-        return jsonify({'error': f'Server error: {str(e)}'})
+        return jsonify({'error': f'Server error: {str(e)}'}),500
 
 # Make sure the static folder exists
 if not os.path.exists('static'):
