@@ -8,21 +8,25 @@ from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Dropout
 import os
+import matplotlib.pyplot as plt
+import traceback
 
 app = Flask(__name__)
 CORS(app)
 
 def create_lstm_model(X_train):
-    # Create and compile LSTM model
-    model = Sequential()
-    model.add(LSTM(units=50, return_sequences=True, input_shape=(X_train.shape[1], 1)))
-    model.add(Dropout(0.2))
-    model.add(LSTM(units=50, return_sequences=True))
-    model.add(Dropout(0.2))
-    model.add(LSTM(units=50))
-    model.add(Dropout(0.2))
-    model.add(Dense(units=1))
-    model.compile(optimizer='adam', loss='mean_squared_error')
+    # Create and compile LSTM model with improved architecture
+    model = Sequential([
+        LSTM(100, return_sequences=True, input_shape=(X_train.shape[1], 1)),
+        Dropout(0.3),
+        LSTM(75, return_sequences=True),
+        Dropout(0.2),
+        LSTM(50),
+        Dropout(0.2),
+        Dense(25, activation='relu'),
+        Dense(1)
+    ])
+    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mae'])
     return model
 
 def prepare_lstm_data(df, time_step=60):
@@ -72,6 +76,46 @@ def predict_future(model, last_sequence, scaler, days_to_predict=30):
     
     return future_prices.flatten()
 
+def plot_price_ma(df, ticker):
+    plt.figure(figsize=(12, 6))
+    plt.plot(df.index, df['Close'], label="Closing Price", color='blue')
+    plt.plot(df.index, df['MA100'], label="100-Day MA", color='green', linestyle='dashed')
+    plt.plot(df.index, df['MA200'], label="200-Day MA", color='red', linestyle='dashed')
+    plt.xlabel("Date")
+    plt.ylabel("Stock Price")
+    plt.title(f"{ticker} Stock Price & Moving Averages")
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig('static/price_ma_chart.png')
+    plt.close()
+
+def plot_actual_vs_predicted(df, test_predictions, ticker):
+    plt.figure(figsize=(12, 6))
+    pred_dates = df.index[len(df) - len(test_predictions):]
+    plt.plot(pred_dates, df['Close'].values[-len(test_predictions):], label="Actual Prices", color='blue')
+    plt.plot(pred_dates, test_predictions.flatten(), label="Predicted Prices", color='orange')
+    plt.xlabel("Date")
+    plt.ylabel("Stock Price")
+    plt.title(f"{ticker} Actual vs Predicted Prices")
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig('static/actual_vs_predicted_chart.png')
+    plt.close()
+
+def plot_future_predictions(future_dates, future_prices, ticker):
+    plt.figure(figsize=(12, 6))
+    plt.plot(future_dates, future_prices, marker='o')
+    plt.title(f"{ticker} 30-Day Future Price Prediction")
+    plt.xlabel("Date")
+    plt.ylabel("Predicted Price")
+    plt.xticks(rotation=45)
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig('static/future_prediction_chart.png')
+    plt.close()
+
 @app.route('/')
 def home():
     return render_template('/index.html')
@@ -80,85 +124,67 @@ def home():
 def analysis():
     return render_template('analysis.html')
 
-@app.route('/analyze', methods=['POST'])
+@app.route('/analyze', methods=['GET'])
 def analyze():
     try:
-        # Get ticker from form
-        ticker = request.form.get('ticker')
+        # Get ticker from query parameter
+        ticker = request.args.get('ticker')
         if not ticker:
             return jsonify({'error': 'No ticker provided'}), 400
-        
-        # Get dates
+
+        # Get historical data
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=730)  # 2 years of data for better training
-        
-        # Load data
+        start_date = end_date - timedelta(days=730)  # Last 2 years
         df = yf.download(ticker, start=start_date, end=end_date)
         if df.empty:
-            return jsonify({'error': 'No data found for this ticker'}),404
-        
+            return jsonify({'error': 'No data found for this ticker'}), 404
+
         # Calculate moving averages
         df['MA100'] = df['Close'].rolling(window=100).mean()
         df['MA200'] = df['Close'].rolling(window=200).mean()
-        
+
         # Prepare data for LSTM
-        time_step = 60  # Use 60 days of data to predict the next day
+        time_step = 60
         X_train, X_test, y_train, y_test, scaler, data = prepare_lstm_data(df, time_step)
-        
-        # Create and train the model
+
+        # Train LSTM model
         model = create_lstm_model(X_train)
         model.fit(X_train, y_train, epochs=20, batch_size=32, verbose=0)
-        
-        # Make predictions on test data
+
+        # Predictions on test data
         test_predictions = model.predict(X_test, verbose=0)
         test_predictions = scaler.inverse_transform(test_predictions)
-        
-        # Prepare data for plotting test predictions (actual vs predicted)
-        pred_dates = df.index[len(df) - len(test_predictions):].strftime('%Y-%m-%d').tolist()
-        actual_prices = df['Close'].values[-len(test_predictions):].tolist()
-        predicted_prices = test_predictions.flatten().tolist()
-        
-        # Predict future prices
+
+        # Future predictions
         last_sequence = scaler.transform(data[-time_step:])
         future_prices = predict_future(model, last_sequence.flatten(), scaler, days_to_predict=30)
-        
-        # Generate dates for future predictions
+
+        # Generate future dates
         last_date = df.index[-1]
-        future_dates = [(last_date + timedelta(days=i+1)).strftime('%Y-%m-%d') for i in range(len(future_prices))]
-        
-        # Convert pandas Series to lists properly
+        future_dates = [(last_date + timedelta(days=i + 1)).strftime('%Y-%m-%d') for i in range(len(future_prices))]
+
+        # Plot charts
+        plot_price_ma(df, ticker)
+        plot_actual_vs_predicted(df, test_predictions, ticker)
+        plot_future_predictions(future_dates, future_prices, ticker)
+
+        # Response JSON with image paths
         response_data = {
-            'dates': df.index.strftime('%Y-%m-%d').tolist(),
-            'closing_prices': df['Close'].values.tolist(),
-            'ma100': df['MA100'].fillna(0).tolist(),
-            'ma200': df['MA200'].fillna(0).tolist(),
             'current_price': float(df['Close'].iloc[-1]),
             'volume': int(df['Volume'].iloc[-1]),
             'high_52week': float(df['High'].max()),
             'low_52week': float(df['Low'].min()),
-            'pred_dates': pred_dates,
-            'actual_prices': actual_prices,
-            'predicted_prices': predicted_prices,
             'future_dates': future_dates,
             'future_prices': future_prices.tolist(),
             'predicted_next_day': float(future_prices[0]),
-            'ohlc_data': [
-                {
-                    'date': date.strftime('%Y-%m-%d'),
-                    'open': float(row['Open']),
-                    'high': float(row['High']),
-                    'low': float(row['Low']),
-                    'close': float(row['Close'])
-                }
-                for date, row in df.iterrows()
-            ]
         }
-        
-        return jsonify(response_data),200
-    
+
+        return jsonify(response_data), 200
+
     except Exception as e:
-        print(f"Error: {str(e)}")  # This will print to your terminal
-        return jsonify({'error': f'Server error: {str(e)}'}),500
+        print(f"Error: {str(e)}")
+        traceback.print_exc()
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 # Make sure the static folder exists
 if not os.path.exists('static'):

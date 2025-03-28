@@ -1,137 +1,97 @@
-/* General Reset */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
+/* General Styles */
 body {
-    font-family: 'Arial', sans-serif;
-    background-color: #f8f9fa;
-    display: flex;
-    height: 100vh;
-}
-
-/* Main container - Split screen */
-.container {
-    display: flex;
-    width: 100%;
-    height: 100vh;
-}
-
-/* Left side - Image container */
-.image-container {
-    flex: 1;
-    background: linear-gradient(to right, #4b6cb7, #182848);
+    font-family: Arial, sans-serif;
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 20px;
+    height: 100vh;
+    margin: 0;
+    background-color: #f4f4f4;
 }
 
-.image-container img {
-    max-width: 80%;
-    height: auto;
+/* Card Styling */
+.rounded-xl {
+    width: 350px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
 }
 
-/* Right side - Login form container */
-.form-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background-color: white;
-    padding: 50px;
+.p-6 {
+    padding: 24px;
 }
 
-/* Form box */
-.form-box {
-    width: 60%;
-    max-width: 400px;
-}
-
-/* Form title */
-.form-box h2 {
-    font-size: 28px;
-    color: #333;
-    margin-bottom: 20px;
+.text-2xl {
+    font-size: 1.5rem;
+    font-weight: bold;
     text-align: center;
 }
 
-/* Input fields */
-.form-control {
+.text-muted-foreground {
+    color: #666;
+    text-align: center;
+}
+
+/* Form Styling */
+.grid {
+    display: grid;
+    gap: 12px;
+}
+
+input {
     width: 100%;
-    padding: 12px;
-    font-size: 16px;
+    padding: 10px;
     border: 1px solid #ccc;
-    border-radius: 5px;
-    margin-bottom: 15px;
+    border-radius: 6px;
+    font-size: 1rem;
 }
 
-/* Buttons */
-.btn {
+input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+/* Button Styles */
+button {
     width: 100%;
-    padding: 12px;
-    font-size: 18px;
+    padding: 10px;
     border: none;
-    border-radius: 5px;
+    border-radius: 6px;
+    font-size: 1rem;
     cursor: pointer;
-    margin-top: 10px;
+    transition: 0.3s;
 }
 
-.btn-primary {
+.bg-primary {
     background-color: #007bff;
     color: white;
 }
 
-.btn-primary:hover {
+.bg-primary:hover {
     background-color: #0056b3;
 }
 
-/* Social login buttons */
-.btn-facebook {
-    background-color: #3b5998;
+/* Social Login Buttons */
+button svg {
+    width: 20px;
+    height: 20px;
+}
+
+button:nth-child(1) {
+    background-color: #333;
     color: white;
 }
 
-.btn-facebook:hover {
-    background-color: #2d4373;
-}
-
-.btn-twitter {
-    background-color: #55acee;
+button:nth-child(2) {
+    background-color: #db4437;
     color: white;
 }
 
-.btn-twitter:hover {
-    background-color: #2795e9;
-}
-
-/* Divider */
-.divider {
-    text-align: center;
-    border-bottom: 1px solid #ccc;
-    margin: 20px 0;
-}
-
-/* Adjustments for smaller screens */
-@media (max-width: 1024px) {
-    .container {
-        flex-direction: column;
-    }
-
-    .image-container {
-        flex: none;
-        height: 40vh;
-    }
-
-    .form-container {
-        flex: none;
-        height: 60vh;
-    }
-
-    .form-box {
-        width: 80%;
+/* Responsive Design */
+@media (max-width: 400px) {
+    .rounded-xl {
+        width: 90%;
     }
 }
