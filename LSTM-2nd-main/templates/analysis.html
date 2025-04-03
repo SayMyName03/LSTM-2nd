@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockSage - Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+        }
+        .metric-card {
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .metric-card h6 {
+            color: #888;
+            margin-bottom: 10px;
+        }
+        .chart-container {
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .prediction-container {
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .prediction-value {
+            font-size: 2.5rem;
+            color: #4CAF50;
+            margin-bottom: 10px;
+        }
+        .prediction-date {
+            color: #888;
+            margin-bottom: 15px;
+        }
+        .input-group .form-control {
+            background-color: #2c2c2c;
+            color: white;
+            border-color: #444;
+        }
+        .input-group .btn-primary {
+            background-color: #4CAF50;
+            border-color: #4CAF50;
+        }
+        .favorite-btn {
+            background-color: transparent;
+            border: 1px solid #888;
+            color: #888;
+            border-radius: 5px;
+            padding: 5px 10px;
+            margin-left: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .favorite-btn.active {
+            background-color: #FFC107;
+            color: #222;
+            border-color: #FFC107;
+        }
+        .history-container {
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #333;
+            cursor: pointer;
+        }
+        .history-item:hover {
+            background-color: #2a2a2a;
+        }
+        .favorites-container {
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .favorite-tag {
+            display: inline-block;
+            background-color: #333;
+            color: #ccc;
+            padding: 5px 10px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .favorite-tag:hover {
+            background-color: #444;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 15px;
+        }
+        .tab {
+            padding: 10px 15px;
+            background-color: #333;
+            cursor: pointer;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .navbar {
+            background-color: #1e1e1e;
+            padding: 10px 20px;
+            margin-bottom: 20px;
+            border-radius: 0 0 10px 10px;
+        }
+        .navbar-brand {
+            color: white;
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+        .logout-btn {
+            background-color: transparent;
+            color: #ccc;
+            border: 1px solid #444;
+            padding: 5px 15px;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+        .logout-btn:hover {
+            background-color: #333;
+            color: white;
+        }
+        .user-info {
+            color: #888;
+            margin-right: 15px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">StockSage</a>
+            <div class="d-flex align-items-center">
+                <span id="userDisplay" class="user-info">Loading user info...</span>
+                <button id="logoutBtn" class="logout-btn">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </button>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container mt-3">
+        <h1 class="text-center">Stock Analysis</h1>
+        <p class="text-center">Enter a stock ticker to analyze its performance and receive AI predictions.</p>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="favorites-container">
+                    <h5>Your Favorite Stocks</h5>
+                    <div id="favoritesList">
+                        <p class="text-muted">Loading favorites...</p>
+                    </div>
+                </div>
+                
+                <div class="search-container">
+                    <form id="stockForm" class="mb-4">
+                        <div class="input-group">
+                            <input type="text" id="ticker" class="form-control" placeholder="Enter Stock Ticker (e.g., AAPL, GOOGL)" required>
+                            <button type="submit" class="btn btn-primary">Analyze</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div id="loadingSpinner" class="text-center mt-4 d-none">
+                    <div class="spinner-border text-light" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-light">Analyzing data and generating predictions. This may take a moment...</p>
+                </div>
+                
+                <div id="errorMessage" class="alert alert-danger mt-4 d-none"></div>
+                
+                <div id="results" class="d-none">
+                    <div class="metrics-container">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <h6>Current Price</h6>
+                                    <h4 id="currentPrice">$0.00</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <h6>Volume</h6>
+                                    <h4 id="volume">0</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <h6>52-Week High</h6>
+                                    <h4 id="high52">$0.00</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <h6>52-Week Low</h6>
+                                    <h4 id="low52">$0.00</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end mb-3">
+                            <button id="favoriteBtn" class="favorite-btn">
+                                <i class="bi bi-star"></i> Add to Favorites
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="tabs">
+                        <div class="tab active" data-tab="current">Current Analysis</div>
+                        <div class="tab" data-tab="history">Prediction History</div>
+                    </div>
+                    
+                    <div id="currentTab" class="tab-content active">
+                        <div class="chart-container">
+                            <h3>Price History with Moving Averages</h3>
+                            <img id="priceMAChart" class="img-fluid" src="" alt="Price Chart">
+                        </div>
+                        
+                        <div class="chart-container mt-4">
+                            <h3>Actual vs Predicted Prices</h3>
+                            <img id="actualVsPredictedChart" class="img-fluid" src="" alt="Actual vs Predicted Chart">
+                        </div>
+                        
+                        <div class="chart-container mt-4">
+                            <h3>30-Day Future Prediction</h3>
+                            <img id="futurePredictionChart" class="img-fluid" src="" alt="Future Prediction Chart">
+                        </div>
+                        
+                        <div class="prediction-container">
+                            <h3>Next Day Price Prediction</h3>
+                            <div id="predictionValue" class="prediction-value">$0.00</div>
+                            <div id="predictionDate" class="prediction-date">Date</div>
+                            <p class="prediction-info">This prediction is based on LSTM neural network analysis of historical data patterns.</p>
+                        </div>
+                    </div>
+                    
+                    <div id="historyTab" class="tab-content">
+                        <div class="history-container">
+                            <h3>Previous Predictions for <span id="historyTickerName"></span></h3>
+                            <div id="predictionHistoryList" class="mt-3">
+                                <p class="text-muted">Loading history...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4 mb-5">
+            <a href="/" class="btn btn-secondary">Back to Home</a>
+        </div>
+    </div>
+    
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCQUHUCd8bKnRdv3AJm9InBlwbfyy4YVWw",
+            authDomain: "stocksage-dee21.firebaseapp.com",
+            projectId: "stocksage-dee21",
+            storageBucket: "stocksage-dee21.firebasestorage.app",
+            messagingSenderId: "959336780489",
+            appId: "1:959336780489:web:ef6bbb9b823efa312ef318",
+            measurementId: "G-HW7K3FFKV6"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        
+        firebase.auth().onAuthStateChanged(function(user) {
+            if (user) {
+                const userDisplay = document.getElementById('userDisplay');
+                userDisplay.textContent = user.email || user.displayName || "User";
+                
+                user.getIdToken().then(idToken => {
+                    sessionStorage.setItem('authToken', idToken);
+                });
+            } else {
+                window.location.href = "/login";
+            }
+        });
+        
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            firebase.auth().signOut().then(() => {
+                sessionStorage.removeItem('authToken');
+                window.location.href = "/";
+            }).catch((error) => {
+                console.error('Error signing out:', error);
+            });
+        });
+        
+        function loadFavorites() {
+            const authToken = sessionStorage.getItem('authToken');
+            
+            fetch('/user/preferences', {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const favoritesList = document.getElementById('favoritesList');
+                if (data.length === 0) {
+                    favoritesList.innerHTML = '<p class="text-muted">No favorites added yet. Analyze stocks and add them to your favorites.</p>';
+                    return;
+                }
+                
+                favoritesList.innerHTML = '';
+                data.forEach(item => {
+                    const tag = document.createElement('div');
+                    tag.className = 'favorite-tag';
+                    tag.textContent = item.ticker;
+                    tag.setAttribute('data-id', item.id);
+                    tag.onclick = function() {
+                        document.getElementById('ticker').value = item.ticker;
+                        document.getElementById('stockForm').dispatchEvent(new Event('submit'));
+                    };
+                    favoritesList.appendChild(tag);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading favorites:', error);
+                document.getElementById('favoritesList').innerHTML = '<p class="text-danger">Error loading favorites</p>';
+            });
+        }
+        
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                this.classList.add('active');
+                const tabName = this.getAttribute('data-tab');
+                document.getElementById(tabName + 'Tab').classList.add('active');
+                
+                if (tabName === 'history') {
+                    loadPredictionHistory();
+                }
+            });
+        });
+        
+        function loadPredictionHistory() {
+            const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+            const authToken = sessionStorage.getItem('authToken');
+            
+            if (!ticker) return;
+            
+            document.getElementById('historyTickerName').textContent = ticker;
+            document.getElementById('predictionHistoryList').innerHTML = '<p class="text-muted">Loading history...</p>';
+            
+            fetch(`/predictions/history/${ticker}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const historyList = document.getElementById('predictionHistoryList');
+                
+                if (!Array.isArray(data) || data.length === 0) {
+                    historyList.innerHTML = '<p class="text-muted">No prediction history found for this stock.</p>';
+                    return;
+                }
+                
+                historyList.innerHTML = '';
+                data.forEach(prediction => {
+                    const item = document.createElement('div');
+                    item.className = 'history-item';
+                    
+                    const predictedPrice = prediction.predicted_prices[0].toFixed(2);
+                    const priceDiff = (prediction.predicted_prices[0] - prediction.current_price).toFixed(2);
+                    const percentChange = ((priceDiff / prediction.current_price) * 100).toFixed(2);
+                    const changeColor = priceDiff >= 0 ? 'text-success' : 'text-danger';
+                    
+                    item.innerHTML = `
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong>Date: ${prediction.prediction_date}</strong>
+                            </div>
+                            <div>
+                                Current: $${prediction.current_price.toFixed(2)} → Predicted: $${predictedPrice}
+                                <span class="${changeColor}">(${priceDiff >= 0 ? '+' : ''}${priceDiff}, ${percentChange}%)</span>
+                            </div>
+                        </div>
+                    `;
+                    
+                    historyList.appendChild(item);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading prediction history:', error);
+                document.getElementById('predictionHistoryList').innerHTML = 
+                    '<p class="text-danger">Error loading prediction history</p>';
+            });
+        }
+        
+        document.getElementById('stockForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+            const authToken = sessionStorage.getItem('authToken');
+            
+            if (!ticker) return;
+            
+            document.getElementById('loadingSpinner').classList.remove('d-none');
+            document.getElementById('results').classList.add('d-none');
+            document.getElementById('errorMessage').classList.add('d-none');
+            
+            fetch(`/analyze?ticker=${ticker}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loadingSpinner').classList.add('d-none');
+                
+                if (data.error) {
+                    document.getElementById('errorMessage').textContent = data.error;
+                    document.getElementById('errorMessage').classList.remove('d-none');
+                    return;
+                }
+                
+                document.getElementById('currentPrice').textContent = '$' + data.current_price.toFixed(2);
+                document.getElementById('volume').textContent = data.volume.toLocaleString();
+                document.getElementById('high52').textContent = '$' + data.high_52week.toFixed(2);
+                document.getElementById('low52').textContent = '$' + data.low_52week.toFixed(2);
+                document.getElementById('predictionValue').textContent = '$' + data.predicted_next_day.toFixed(2);
+                document.getElementById('predictionDate').textContent = data.future_dates[0];
+
+                const timestamp = Date.now();
+                document.getElementById('priceMAChart').src = '/static/price_ma_chart.png?t=' + timestamp;
+                document.getElementById('actualVsPredictedChart').src = '/static/actual_vs_predicted_chart.png?t=' + timestamp;
+                document.getElementById('futurePredictionChart').src = '/static/future_prediction_chart.png?t=' + timestamp;
+
+                document.getElementById('results').classList.remove('d-none');
+                
+                const favoriteBtn = document.getElementById('favoriteBtn');
+                favoriteBtn.onclick = function() {
+                    toggleFavorite(ticker);
+                };
+                
+                checkFavoriteStatus(ticker);
+            })
+            .catch(error => {
+                document.getElementById('loadingSpinner').classList.add('d-none');
+                document.getElementById('errorMessage').textContent = 'Error: ' + error.message;
+                document.getElementById('errorMessage').classList.remove('d-none');
+                console.error('Error:', error);
+            });
+        });
+        
+        function checkFavoriteStatus(ticker) {
+            const authToken = sessionStorage.getItem('authToken');
+            
+            fetch('/user/preferences', {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const isFavorite = data.some(item => item.ticker === ticker);
+                const favoriteBtn = document.getElementById('favoriteBtn');
+                
+                if (isFavorite) {
+                    favoriteBtn.classList.add('active');
+                    favoriteBtn.innerHTML = '<i class="bi bi-star-fill"></i> Remove from Favorites';
+                } else {
+                    favoriteBtn.classList.remove('active');
+                    favoriteBtn.innerHTML = '<i class="bi bi-star"></i> Add to Favorites';
+                }
+            })
+            .catch(error => console.error('Error checking favorite status:', error));
+        }
+        
+        function toggleFavorite(ticker) {
+            const favoriteBtn = document.getElementById('favoriteBtn');
+            const isAdding = !favoriteBtn.classList.contains('active');
+            const authToken = sessionStorage.getItem('authToken');
+            
+            if (isAdding) {
+                fetch('/user/preferences', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ ticker: ticker })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    favoriteBtn.classList.add('active');
+                    favoriteBtn.innerHTML = '<i class="bi bi-star-fill"></i> Remove from Favorites';
+                    loadFavorites();
+                })
+                .catch(error => console.error('Error adding favorite:', error));
+            } else {
+                fetch('/user/preferences', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const preference = data.find(item => item.ticker === ticker);
+                    if (preference) {
+                        fetch('/user/preferences', {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${authToken}`
+                            },
+                            body: JSON.stringify({ id: preference.id })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            favoriteBtn.classList.remove('active');
+                            favoriteBtn.innerHTML = '<i class="bi bi-star"></i> Add to Favorites';
+                            loadFavorites();
+                        })
+                        .catch(error => console.error('Error removing favorite:', error));
+                    }
+                })
+                .catch(error => console.error('Error fetching preferences:', error));
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFavorites();
+        });
+    </script>
+</body>
+</html>
