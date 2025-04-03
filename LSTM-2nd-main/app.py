@@ -27,7 +27,17 @@ db = SQLAlchemy(app)
 
 
 cred = credentials.Certificate({
-    # Check the json file
+    "type": "service_account",
+    "project_id": "stocksage-dee21",
+    "private_key_id": "b90ad8ed6d9518eb6ba0972411262546b94b7292",
+    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDSEvpYv2X9Gpw6\nmLzqG3itfj2WT4/4VpxWV/uw7j3W6jNwcp34jkUIrYrTiZHAWL4WmidGjvTtixnd\nDPI/4K7AT5Xp2BtULABsVzUhSHgN6dIeZ2MzKzsN2LjDpLmkumA50RwfxrEsnF/D\n+sTjIBCthrvhaRjzWbNmCSpCg4KeRIFWWOqxV5RDOkBfdXbSpY9OYkaxP0QmtQjR\nOGrgN3oF57X21Tl6NrAye6HfK9+onpAm0Z0lxbdFG0W6zNDhgK4VLf8DSKnZNt35\np7NA+B47CQnY1h0EsR+zjGQoU7VMrB9CM2ME/rI8OZGNAoQP5YhVVgEp/5z+owdY\nYX5yAs1tAgMBAAECggEAZI/yKL7C51UwOXq5YIYzEDZQ7B39KN/pKgonMczybGmj\noy4zAfO1B1DwFpCR5ZZ1tKMprwSrKfV/NYrHgp2fee7/MDij6HjB4RskE2E6G0r1\nq1lJqwqEU/4NgJZfygPwIW1BPdLjKJxY2Zu3WZSVd0P6t46Ug5XKo8s6YCnNQs5h\nVgIOI3LptWrXhuykhtqLqalACpWBPzNPpoHFVQhC0Dk6yRtzdRzEsXER0jL0aVgU\nWv7z887K738RrMzspqeGUeWjQBNed3loidSHi2qVtVfHhCNqZbGokz6pBk/sYyDy\nHVe1l9IhwucbOA7A7wmWxS+DK0Rnx7mPfrSXGNz6fwKBgQDtn5UCo5TiXIEMV5Dh\n2uQszaRwWO5z0sPsTS7fV6/Gh05rJ8+gMMHaQBUVEfzonMblUe8glZ/9bnrZrBKX\nrwdtU/0FMmW21It+fFfCfYOvRSMuM2dcMhBJoRxbdEONltozIWFJt3IoDcVzTwk/\n3ujSiYwBTPoQ6c7J7CwqlQKh8wKBgQDiUftZNWfQyc3P0t4k4LgXI7CG0qutSYE0\nyP5+XmYwceGNmpJLDm7kix3+PFhV2+1LNkFw5GKgTrOByN1bVHE9cke+wp0act4J\n1gLUUnyOQ0/gy72IpO6Gh20CLf6Y46G2BmRQhot6cdDJTJFvMkKKgDiQkygYpyCM\n8rBPCoVLHwKBgFt15fvbDK5H3p/qgGh+QP8Bs/5OLJHGGQU1/AmZDZ4DbGqQKzlE\nKwkfSz4N62N5HJEdhUXscWUxhfWMZqedheVNw4ChkkbZ7ksj/v9sIihvGwhoXqs8\n1coRSgHlcS7pVlkByxl9k2HZUxt721qLKOAIcyv4/fNOmvpbffBx5E6DAoGAR+3g\nYajsltoclGmjersFJy2LpD3+nDOZYgpjgAxGlC0Nj7DJwBsVOYPRg4TwWlFsqJPU\n1qlvgx2gRaZuW+GJoArbLJCz170cPqoK+ipBNgHEuGBom643tQADsEan/TWTpsN/\nTGyGleLohaHVMy8ZIOXBlImAm906JjHXwTdJx+cCgYEA4wrq4fG4AiLXOr8dvmB6\nWYf9q90/eLmZezUuLnaWp24VjTUtrsNj4b235JSzEGH14o9Zc4fXkpbawM79gTqR\nkFfNe4XGjJCPQjk88H5OuxqQkbBOxW9gn5nUcPLaqF3REyCVHQbWV+yT/7mC7SV9\nhDQSBBSMM3SX3r5bfk4uwCE=\n-----END PRIVATE KEY-----\n",
+    "client_email": "firebase-adminsdk-fbsvc@stocksage-dee21.iam.gserviceaccount.com",
+    "client_id": "111284639930692208020",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40stocksage-dee21.iam.gserviceaccount.com",
+    "universe_domain": "googleapis.com"
 })
 
 try:
