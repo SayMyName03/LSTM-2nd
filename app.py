@@ -6,22 +6,23 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM, Dropout
+from tensorflow.keras.layers import Dense, LSTM, Dropout, Bidirectional, Attention
 import os
 import matplotlib.pyplot as plt
 import traceback
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 app = Flask(__name__)
 CORS(app)
 
 def create_lstm_model(X_train):
-    # Create and compile LSTM model with improved architecture
+    # Create and compile LSTM model with Bidirectional LSTM and Attention
     model = Sequential([
-        LSTM(100, return_sequences=True, input_shape=(X_train.shape[1], 1)),
+        Bidirectional(LSTM(100, return_sequences=True, input_shape=(X_train.shape[1], 1))),
         Dropout(0.3),
         LSTM(75, return_sequences=True),
         Dropout(0.2),
-        LSTM(50),
+        LSTM(50, return_sequences=True),
         Dropout(0.2),
         Dense(25, activation='relu'),
         Dense(1)
@@ -155,6 +156,13 @@ def analyze():
         test_predictions = model.predict(X_test, verbose=0)
         test_predictions = scaler.inverse_transform(test_predictions)
 
+        # Reshape y_test to 2D for inverse transform and metrics calculation
+        y_test_actual = scaler.inverse_transform(y_test.reshape(-1, 1))
+
+        # Calculate RMSE and MAE
+        rmse = np.sqrt(mean_squared_error(y_test_actual, test_predictions))
+        mae = mean_absolute_error(y_test_actual, test_predictions)
+
         # Future predictions
         last_sequence = scaler.transform(data[-time_step:])
         future_prices = predict_future(model, last_sequence.flatten(), scaler, days_to_predict=30)
@@ -168,7 +176,7 @@ def analyze():
         plot_actual_vs_predicted(df, test_predictions, ticker)
         plot_future_predictions(future_dates, future_prices, ticker)
 
-        # Response JSON with image paths
+        # Response JSON with image paths and metrics
         response_data = {
             'current_price': float(df['Close'].iloc[-1]),
             'volume': int(df['Volume'].iloc[-1]),
@@ -177,6 +185,8 @@ def analyze():
             'future_dates': future_dates,
             'future_prices': future_prices.tolist(),
             'predicted_next_day': float(future_prices[0]),
+            'rmse': float(rmse),
+            'mae': float(mae),
         }
 
         return jsonify(response_data), 200
