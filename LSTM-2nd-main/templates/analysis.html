@@ -340,7 +340,8 @@
                     tag.setAttribute('data-id', item.id);
                     tag.onclick = function() {
                         document.getElementById('ticker').value = item.ticker;
-                        document.getElementById('stockForm').dispatchEvent(new Event('submit'));
+                        // Immediately trigger analysis for the clicked favorite
+                        analyzeTicker(item.ticker);
                     };
                     favoritesList.appendChild(tag);
                 });
@@ -351,88 +352,21 @@
             });
         }
         
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', function() {
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                
-                this.classList.add('active');
-                const tabName = this.getAttribute('data-tab');
-                document.getElementById(tabName + 'Tab').classList.add('active');
-                
-                if (tabName === 'history') {
-                    loadPredictionHistory();
-                }
-            });
-        });
-        
-        function loadPredictionHistory() {
-            const ticker = document.getElementById('ticker').value.trim().toUpperCase();
-            const authToken = sessionStorage.getItem('authToken');
-            
-            if (!ticker) return;
-            
-            document.getElementById('historyTickerName').textContent = ticker;
-            document.getElementById('predictionHistoryList').innerHTML = '<p class="text-muted">Loading history...</p>';
-            
-            fetch(`/predictions/history/${ticker}`, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                const historyList = document.getElementById('predictionHistoryList');
-                
-                if (!Array.isArray(data) || data.length === 0) {
-                    historyList.innerHTML = '<p class="text-muted">No prediction history found for this stock.</p>';
-                    return;
-                }
-                
-                historyList.innerHTML = '';
-                data.forEach(prediction => {
-                    const item = document.createElement('div');
-                    item.className = 'history-item';
-                    
-                    const predictedPrice = prediction.predicted_prices[0].toFixed(2);
-                    const priceDiff = (prediction.predicted_prices[0] - prediction.current_price).toFixed(2);
-                    const percentChange = ((priceDiff / prediction.current_price) * 100).toFixed(2);
-                    const changeColor = priceDiff >= 0 ? 'text-success' : 'text-danger';
-                    
-                    item.innerHTML = `
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <strong>Date: ${prediction.prediction_date}</strong>
-                            </div>
-                            <div>
-                                Current: $${prediction.current_price.toFixed(2)} → Predicted: $${predictedPrice}
-                                <span class="${changeColor}">(${priceDiff >= 0 ? '+' : ''}${priceDiff}, ${percentChange}%)</span>
-                            </div>
-                        </div>
-                    `;
-                    
-                    historyList.appendChild(item);
-                });
-            })
-            .catch(error => {
-                console.error('Error loading prediction history:', error);
-                document.getElementById('predictionHistoryList').innerHTML = 
-                    '<p class="text-danger">Error loading prediction history</p>';
-            });
-        }
-        
         document.getElementById('stockForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
             const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+            analyzeTicker(ticker);
+        });
+        
+        function analyzeTicker(ticker) {
             const authToken = sessionStorage.getItem('authToken');
-            
             if (!ticker) return;
-            
+
             document.getElementById('loadingSpinner').classList.remove('d-none');
             document.getElementById('results').classList.add('d-none');
             document.getElementById('errorMessage').classList.add('d-none');
-            
+
             fetch(`/analyze?ticker=${ticker}`, {
                 headers: {
                     'Authorization': `Bearer ${authToken}`
@@ -475,7 +409,7 @@
                 document.getElementById('errorMessage').classList.remove('d-none');
                 console.error('Error:', error);
             });
-        });
+        }
         
         function checkFavoriteStatus(ticker) {
             const authToken = sessionStorage.getItem('authToken');

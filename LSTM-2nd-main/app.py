@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from flask_cors import CORS  
 import yfinance as yf
@@ -5,8 +8,8 @@ from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM, Dropout
+from tensorflow.keras.models import Sequential # type: ignore
+from tensorflow.keras.layers import Dense, LSTM, Dropout # type: ignore
 import os
 import matplotlib.pyplot as plt
 import traceback
@@ -428,7 +431,11 @@ def analyze(user_id):
         if analysis_record:
             analysis_record.successful = False
             analysis_record.error_message = str(e)
-            db.session.commit()
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+        db.session.rollback()
         return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 @app.route('/predictions/history/<ticker>', methods=['GET'])
@@ -538,7 +545,17 @@ def get_analysis_history(user_id):
         
     except Exception as e:
         print(f"Error: {str(e)}")
+        db.session.rollback()
         return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+db_initialized = False
+
+@app.before_request
+def before_request_func():
+    global db_initialized
+    if not db_initialized:
+        init_db()
+        db_initialized = True
 
 # Make sure the static folder exists
 if not os.path.exists('static'):
