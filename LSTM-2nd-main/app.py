@@ -355,7 +355,13 @@ def analyze(user_id):
         ticker = request.args.get('ticker')
         if not ticker:
             return jsonify({'error': 'No ticker provided'}), 400
-            
+
+        # Detect currency symbol
+        if ticker.upper().endswith('.NS') or ticker.upper().endswith('.BO'):
+            currency_symbol = '₹'
+        else:
+            currency_symbol = '$'
+
         # Create analysis history record with user_id
         analysis_record = AnalysisHistory(user_id=user_id, ticker=ticker)
         db.session.add(analysis_record)
@@ -434,7 +440,8 @@ def analyze(user_id):
             'prediction_id': prediction.id,
             'price_ma_chart': '/static/' + price_ma_chart_filename,
             'actual_vs_predicted_chart': '/static/' + actual_vs_pred_chart_filename,
-            'future_prediction_chart': '/static/' + future_pred_chart_filename
+            'future_prediction_chart': '/static/' + future_pred_chart_filename,
+            'currency_symbol': currency_symbol
         }
 
         return jsonify(response_data), 200

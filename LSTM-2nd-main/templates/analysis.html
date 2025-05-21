@@ -375,18 +375,21 @@
             .then(response => response.json())
             .then(data => {
                 document.getElementById('loadingSpinner').classList.add('d-none');
-                
+
                 if (data.error) {
                     document.getElementById('errorMessage').textContent = data.error;
                     document.getElementById('errorMessage').classList.remove('d-none');
                     return;
                 }
-                
-                document.getElementById('currentPrice').textContent = '$' + data.current_price.toFixed(2);
+
+                // Use currency symbol from backend
+                const currency = data.currency_symbol || '$';
+
+                document.getElementById('currentPrice').textContent = currency + data.current_price.toFixed(2);
                 document.getElementById('volume').textContent = data.volume.toLocaleString();
-                document.getElementById('high52').textContent = '$' + data.high_52week.toFixed(2);
-                document.getElementById('low52').textContent = '$' + data.low_52week.toFixed(2);
-                document.getElementById('predictionValue').textContent = '$' + data.predicted_next_day.toFixed(2);
+                document.getElementById('high52').textContent = currency + data.high_52week.toFixed(2);
+                document.getElementById('low52').textContent = currency + data.low_52week.toFixed(2);
+                document.getElementById('predictionValue').textContent = currency + data.predicted_next_day.toFixed(2);
                 document.getElementById('predictionDate').textContent = data.future_dates[0];
 
                 // Use the returned image URLs instead of static paths
