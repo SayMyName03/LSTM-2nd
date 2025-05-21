@@ -19,6 +19,7 @@ import firebase_admin
 from firebase_admin import credentials, auth
 import functools
 from sqlalchemy import text  
+import uuid
 
 app = Flask(__name__)
 CORS(app)
@@ -289,7 +290,7 @@ def predict_future(model, last_sequence, scaler, days_to_predict=30):
     
     return future_prices.flatten()
 
-def plot_price_ma(df, ticker):
+def plot_price_ma(df, ticker, filename):
     plt.figure(figsize=(12, 6))
     plt.plot(df.index, df['Close'], label="Closing Price", color='blue')
     plt.plot(df.index, df['MA100'], label="100-Day MA", color='green', linestyle='dashed')
@@ -300,10 +301,10 @@ def plot_price_ma(df, ticker):
     plt.legend()
     plt.grid()
     plt.tight_layout()
-    plt.savefig('static/price_ma_chart.png')
+    plt.savefig(filename)
     plt.close()
 
-def plot_actual_vs_predicted(df, test_predictions, ticker):
+def plot_actual_vs_predicted(df, test_predictions, ticker, filename):
     plt.figure(figsize=(12, 6))
     pred_dates = df.index[len(df) - len(test_predictions):]
     plt.plot(pred_dates, df['Close'].values[-len(test_predictions):], label="Actual Prices", color='blue')
@@ -314,10 +315,10 @@ def plot_actual_vs_predicted(df, test_predictions, ticker):
     plt.legend()
     plt.grid()
     plt.tight_layout()
-    plt.savefig('static/actual_vs_predicted_chart.png')
+    plt.savefig(filename)
     plt.close()
 
-def plot_future_predictions(future_dates, future_prices, ticker):
+def plot_future_predictions(future_dates, future_prices, ticker, filename):
     plt.figure(figsize=(12, 6))
     plt.plot(future_dates, future_prices, marker='o')
     plt.title(f"{ticker} 30-Day Future Price Prediction")
@@ -326,7 +327,7 @@ def plot_future_predictions(future_dates, future_prices, ticker):
     plt.xticks(rotation=45)
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig('static/future_prediction_chart.png')
+    plt.savefig(filename)
     plt.close()
 
 @app.route('/')
@@ -395,10 +396,20 @@ def analyze(user_id):
         last_date = df.index[-1]
         future_dates = [(last_date + timedelta(days=i + 1)).strftime('%Y-%m-%d') for i in range(len(future_prices))]
 
-        # Plot charts
-        plot_price_ma(df, ticker)
-        plot_actual_vs_predicted(df, test_predictions, ticker)
-        plot_future_predictions(future_dates, future_prices, ticker)
+        # Generate unique filenames for this request (absolute path for saving, relative for URL)
+        unique_id = str(uuid.uuid4())
+        price_ma_chart_filename = f'price_ma_chart_{ticker}_{unique_id}.png'
+        actual_vs_pred_chart_filename = f'actual_vs_predicted_chart_{ticker}_{unique_id}.png'
+        future_pred_chart_filename = f'future_prediction_chart_{ticker}_{unique_id}.png'
+
+        price_ma_chart_path = os.path.join(app.static_folder, price_ma_chart_filename)
+        actual_vs_pred_chart_path = os.path.join(app.static_folder, actual_vs_pred_chart_filename)
+        future_pred_chart_path = os.path.join(app.static_folder, future_pred_chart_filename)
+
+        # Plot charts with correct absolute paths
+        plot_price_ma(df, ticker, price_ma_chart_path)
+        plot_actual_vs_predicted(df, test_predictions, ticker, actual_vs_pred_chart_path)
+        plot_future_predictions(future_dates, future_prices, ticker, future_pred_chart_path)
 
         # Store prediction in database with user_id
         prediction = StockPrediction(
@@ -411,7 +422,7 @@ def analyze(user_id):
         db.session.add(prediction)
         db.session.commit()
 
-        # Response JSON with image paths
+        # Response JSON with image URLs (relative to /static/)
         response_data = {
             'current_price': float(df['Close'].iloc[-1]),
             'volume': int(df['Volume'].iloc[-1]),
@@ -420,7 +431,10 @@ def analyze(user_id):
             'future_dates': future_dates,
             'future_prices': future_prices.tolist(),
             'predicted_next_day': float(future_prices[0]),
-            'prediction_id': prediction.id  # Include prediction ID for reference
+            'prediction_id': prediction.id,
+            'price_ma_chart': '/static/' + price_ma_chart_filename,
+            'actual_vs_predicted_chart': '/static/' + actual_vs_pred_chart_filename,
+            'future_prediction_chart': '/static/' + future_pred_chart_filename
         }
 
         return jsonify(response_data), 200
