@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/login.css">
+    <title>StockSage - Login</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+</head>
+<body>
+    <div class="rounded-xl border bg-card text-card-foreground shadow">
+        <div class="flex flex-col p-6 space-y-1">
+            <div class="font-semibold tracking-tight text-2xl">Sign in to StockSage</div>
+            <div class="text-sm text-muted-foreground">Enter your credentials to access your account</div>
+        </div>
+        
+        <div class="p-6 pt-0 grid gap-4">            
+            <div class="grid gap-2">
+                <label class="text-sm font-medium leading-none" for="email">Email</label>
+                <input type="email" id="email" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" placeholder="m@example.com">
+            </div>
+            
+            <div class="grid gap-2">
+                <label class="text-sm font-medium leading-none" for="password">Password</label>
+                <input type="password" id="password" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" placeholder="Enter your password">
+            </div>
+            
+            <div id="loginError" class="text-red-500 text-sm hidden">
+
+            </div>
+        </div>
+        
+        <div class="flex items-center p-6 pt-0">
+            <button id="loginButton" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 w-full">
+                Sign In
+            </button>
+        </div>
+        
+        <div class="text-center pb-4">
+            <span class="text-sm text-muted-foreground">Don't have an account? </span>
+            <a href="/register" class="text-sm font-medium text-primary underline-offset-4 hover:underline">Register</a>
+        </div>
+    </div>
+    
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCQUHUCd8bKnRdv3AJm9InBlwbfyy4YVWw",
+            authDomain: "stocksage-dee21.firebaseapp.com",
+            projectId: "stocksage-dee21",
+            storageBucket: "stocksage-dee21.appspot.com",
+            messagingSenderId: "959336780489",
+            appId: "1:959336780489:web:ef6bbb9b823efa312ef318",
+            measurementId: "G-HW7K3FFKV6"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        
+        // Check if user is already logged in
+        firebase.auth().onAuthStateChanged(function(user) {
+            if (user) {
+                // User is signed in, redirect to analysis page
+                window.location.href = "/analysis";
+            }
+        });
+        
+        // Show/hide loading indicator
+        function showLoading() {
+            document.getElementById('loginButton').disabled = true;
+            document.getElementById('loginButton').textContent = 'Signing in...';
+        }
+        
+        function hideLoading() {
+            document.getElementById('loginButton').disabled = false;
+            document.getElementById('loginButton').textContent = 'Sign In';
+        }
+        
+        // Show error message
+        function showError(message) {
+            const errorElement = document.getElementById('loginError');
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+        }
+        
+        // Email/Password login
+        document.getElementById('loginButton').addEventListener('click', function() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            
+            // Hide any existing error message
+            document.getElementById('loginError').classList.add('hidden');
+            
+            if (!email || !password) {
+                showError("Please enter both email and password");
+                return;
+            }
+            
+            showLoading();
+            
+            firebase.auth().signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    return user.getIdToken().then(idToken => {
+                        sessionStorage.setItem('authToken', idToken);
+                        window.location.href = "/analysis";
+                    });
+                })
+                .catch((error) => {
+                    hideLoading();
+                    let errorMessage;
+                    
+                    switch (error.code) {
+                        case 'auth/user-not-found':
+                            errorMessage = "No account found with this email address.";
+                            break;
+                        case 'auth/wrong-password':
+                            errorMessage = "Incorrect password, please try again.";
+                            break;
+                        case 'auth/too-many-requests':
+                            errorMessage = "Too many failed login attempts. Please try again later or reset your password.";
+                            break;
+                        default:
+                            errorMessage = error.message;
+                    }
+                    
+                    showError(errorMessage);
+                });
+        });
+        
+        // Handle Enter key for login
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('loginButton').click();
+            }
+        });
+    </script>
+</body>
+</html>

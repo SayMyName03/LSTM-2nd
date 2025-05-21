@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/register.css">
+    <title>StockSage - Register</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+</head>
+<body>
+    <div class="rounded-xl border bg-card text-card-foreground shadow">
+        <div class="flex flex-col p-6 space-y-1">
+            <div class="font-semibold tracking-tight text-2xl">Create an Account</div>
+            <div class="text-sm text-muted-foreground">Register to access stock predictions and analysis</div>
+        </div>
+        
+        <div class="p-6 pt-0 grid gap-4">
+            <div class="grid gap-2">
+                <label class="text-sm font-medium leading-none" for="email">Email</label>
+                <input type="email" id="email" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" placeholder="m@example.com">
+            </div>
+            
+            <div class="grid gap-2">
+                <label class="text-sm font-medium leading-none" for="password">Password</label>
+                <input type="password" id="password" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" placeholder="Choose a password (minimum 6 characters)">
+            </div>
+            
+            <div class="grid gap-2">
+                <label class="text-sm font-medium leading-none" for="confirmPassword">Confirm Password</label>
+                <input type="password" id="confirmPassword" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" placeholder="Confirm your password">
+            </div>
+            
+            <div id="registerError" class="text-red-500 text-sm hidden">
+                <!-- Error message will appear here -->
+            </div>
+        </div>
+        
+        <div class="flex items-center p-6 pt-0">
+            <button id="registerButton" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 w-full">
+                Create Account
+            </button>
+        </div>
+        
+        <div class="text-center pb-4">
+            <span class="text-sm text-muted-foreground">Already have an account? </span>
+            <a href="/login" class="text-sm font-medium text-primary underline-offset-4 hover:underline">Login</a>
+        </div>
+    </div>
+    
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCQUHUCd8bKnRdv3AJm9InBlwbfyy4YVWw",
+            authDomain: "stocksage-dee21.firebaseapp.com",
+            projectId: "stocksage-dee21",
+            storageBucket: "stocksage-dee21.appspot.com",
+            messagingSenderId: "959336780489",
+            appId: "1:959336780489:web:ef6bbb9b823efa312ef318",
+            measurementId: "G-HW7K3FFKV6"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        
+        // Check if user is already logged in
+        firebase.auth().onAuthStateChanged(function(user) {
+            if (user) {
+                // User is signed in, redirect to analysis page
+                window.location.href = "/analysis";
+            }
+        });
+        
+        // Show/hide loading indicator
+        function showLoading() {
+            document.getElementById('registerButton').disabled = true;
+            document.getElementById('registerButton').textContent = 'Creating account...';
+        }
+        
+        function hideLoading() {
+            document.getElementById('registerButton').disabled = false;
+            document.getElementById('registerButton').textContent = 'Create Account';
+        }
+        
+        // Show error message
+        function showError(message) {
+            const errorElement = document.getElementById('registerError');
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+        }
+        
+        // Register with email and password
+        document.getElementById('registerButton').addEventListener('click', function() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // Hide any existing error message
+            document.getElementById('registerError').classList.add('hidden');
+            
+            // Validate inputs
+            if (!email || !password || !confirmPassword) {
+                showError("Please fill in all fields");
+                return;
+            }
+            
+            if (password.length < 6) {
+                showError("Password must be at least 6 characters long");
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showError("Passwords do not match");
+                return;
+            }
+            
+            showLoading();
+            
+            firebase.auth().createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    return user.getIdToken().then(idToken => {
+                        sessionStorage.setItem('authToken', idToken);
+                        window.location.href = "/analysis";
+                    });
+                })
+                .catch((error) => {
+                    hideLoading();
+                    let errorMessage;
+                    
+                    switch (error.code) {
+                        case 'auth/email-already-in-use':
+                            errorMessage = "This email is already in use. Please try logging in instead.";
+                            break;
+                        case 'auth/invalid-email':
+                            errorMessage = "Please enter a valid email address.";
+                            break;
+                        case 'auth/weak-password':
+                            errorMessage = "Password is too weak. Please choose a stronger password.";
+                            break;
+                        default:
+                            errorMessage = error.message;
+                    }
+                    
+                    showError(errorMessage);
+                });
+        });
+    </script>
+</body>
+</html>
