@@ -394,9 +394,44 @@ def analyze(user_id):
         test_predictions = model.predict(X_test, verbose=0)
         test_predictions = scaler.inverse_transform(test_predictions)
 
+        # Compute accuracy metrics on the test set (RMSE, MAE, MAPE) and residual std
+        try:
+            from sklearn.metrics import mean_squared_error, mean_absolute_error
+
+            # Unscale y_test for metric computation
+            y_test_unscaled = scaler.inverse_transform(y_test.reshape(-1, 1)).flatten()
+            test_preds_flat = test_predictions.flatten()
+
+            test_rmse = float(np.sqrt(mean_squared_error(y_test_unscaled, test_preds_flat)))
+            test_mae = float(mean_absolute_error(y_test_unscaled, test_preds_flat))
+            eps = 1e-9
+            test_mape = float(np.mean(np.abs((y_test_unscaled - test_preds_flat) / (y_test_unscaled + eps))) * 100.0)
+
+            residuals = y_test_unscaled - test_preds_flat
+            residual_std = float(np.std(residuals))
+        except Exception:
+            test_rmse = None
+            test_mae = None
+            test_mape = None
+            residual_std = None
+
         # Future predictions
         last_sequence = scaler.transform(data[-time_step:])
         future_prices = predict_future(model, last_sequence.flatten(), scaler, days_to_predict=30)
+
+        # Compute next-day prediction and a simple 95% CI using residual std (approximate)
+        try:
+            predicted_next = float(future_prices[0])
+            if residual_std is not None:
+                ci_lower = predicted_next - 1.96 * residual_std
+                ci_upper = predicted_next + 1.96 * residual_std
+            else:
+                ci_lower = None
+                ci_upper = None
+        except Exception:
+            predicted_next = None
+            ci_lower = None
+            ci_upper = None
 
         # Generate future dates
         last_date = df.index[-1]
@@ -436,12 +471,19 @@ def analyze(user_id):
             'low_52week': float(df['Low'].min()),
             'future_dates': future_dates,
             'future_prices': future_prices.tolist(),
-            'predicted_next_day': float(future_prices[0]),
+            'predicted_next_day': predicted_next,
             'prediction_id': prediction.id,
             'price_ma_chart': '/static/' + price_ma_chart_filename,
             'actual_vs_predicted_chart': '/static/' + actual_vs_pred_chart_filename,
             'future_prediction_chart': '/static/' + future_pred_chart_filename,
-            'currency_symbol': currency_symbol
+            'currency_symbol': currency_symbol,
+            # Test-set metrics
+            'test_rmse': test_rmse,
+            'test_mae': test_mae,
+            'test_mape': test_mape,
+            'residual_std': residual_std,
+            # Simple approximate 95% CI for next-day prediction
+            'predicted_next_day_ci': [ci_lower, ci_upper]
         }
 
         return jsonify(response_data), 200
